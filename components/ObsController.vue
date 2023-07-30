@@ -13,13 +13,13 @@
                     <template v-slot:prepend>
                         <v-icon color="success"></v-icon>
                     </template>
-                    อัด{{ roomShortName }}
+                    <span class="action-btn">อัด{{ roomShortName }}</span>
                 </v-btn>
                 <v-btn prepend-icon="mdi-stop" size="x-large" color="red-lighten-3" elevation="2" @click="askConfirmStopRecord">
                     <template v-slot:prepend>
                         <v-icon color="red"></v-icon>
                     </template>
-                    หยุดอัด{{ roomShortName }}
+                    <span class="action-btn">หยุดอัด{{ roomShortName }}</span>
                 </v-btn>
             </div>
             <div class="grid grid-cols-2 gap-0 pt-4 pb-2">
@@ -39,7 +39,14 @@
                     </div>
                 </div>
                 <div class="flex justify-center">
-                    <div v-if="isRecording">
+                    <div v-if="isStopping">
+                        <p>
+                            <v-icon icon="mdi-video-wireless" color="red" class="animate-pulse"></v-icon> {{ roomShortName
+                            }}กำลังหยุด
+                        </p>
+                        <p>{{ currentProfileReadable() }}</p>
+                    </div>
+                    <div v-else-if="isRecording">
                         <p>
                             <v-icon icon="mdi-video-wireless" color="red" class="animate-pulse"></v-icon> {{ roomShortName
                             }}กำลังอัด
@@ -72,6 +79,12 @@
     </div>
 </template>
 
+<style>
+.action-btn{
+    font-size: 0.85em;
+}
+</style>
+
 <script setup lang="ts">
 import OBSWebSocket, { OBSEventTypes, OBSRequestTypes, OBSResponseTypes, EventSubscription } from 'obs-websocket-js';
 import { ref, onMounted } from 'vue'
@@ -97,8 +110,9 @@ export default {
             isObsConnected: false,
             isCameraStatusOk: false,
             isRecording: false,
+            isStopping: false,
             durationMs: 0,
-            recordingInterval: 0,
+            recordingStatusInterval: 0,
             currentSceneCollection: "", // Unseen, Green_room, Chaiklang_room
             currentProfile: "",
             alertShow: false,
@@ -297,9 +311,10 @@ export default {
                     if (runtimeConfig.public.appEnv === "development") {
                         console.error('Failed to start recording:', err);
                     }
-                    this.alertError(err.message)
+                    this.alertError('Failed to start recording: '+ err.message)
                 } else {
                     console.error('Failed to start recording unknown error :', err);
+                    this.alertError('Failed to start recording unknown error : '+ err)
                     return err
                 }
             }
@@ -317,7 +332,7 @@ export default {
             try {
                 if (this.isRecording) {
                     await this.obs.call('StopRecord');
-                    clearInterval(this.recordingInterval);
+                    
                     this.durationMs = 0;
                 }
             } catch (err: unknown) {
@@ -405,13 +420,26 @@ export default {
                 case "OBS_WEBSOCKET_OUTPUT_STARTED":
                     this.isRecording = true
 
-                    // subscribe duration update
-                    // this.obs.addListener(EventSubscription.Outputs)
+                    // update current profile
+                    this.getCurrentProfile();
 
+                    // GetRecordStatus start interval
+                    if(!this.recordingStatusInterval){
+                        let app = this
+                        this.recordingStatusInterval = window.setInterval(function () {app.getRecordStatus()}, 2000);
+                    }
+                    break;
+
+                case "OBS_WEBSOCKET_OUTPUT_STOPPING":
+                    this.isStopping = true;
                     break;
                 case "OBS_WEBSOCKET_OUTPUT_STOPPED":
-                    this.isRecording = false
-                    this.durationMs = 0
+                    // GetRecordStatus stop interval
+                    clearInterval(this.recordingStatusInterval);
+                    this.isStopping = false;
+                    this.isRecording = false;
+                    this.durationMs = 0;
+                    
                     break;
                 default:
                     break;
@@ -498,7 +526,11 @@ export default {
             await this.connectOBS();
             this.getCameraStatus();
             this.getCurrentProfile();
-            this.getRecordStatus();
+            await this.getRecordStatus();
+            if(!this.recordingStatusInterval && this.isRecording){
+                let app = this
+                this.recordingStatusInterval = window.setInterval(function () {app.getRecordStatus()}, 2000);
+            }
         } catch (err: unknown) {
             if (err instanceof Error) {
                 if (runtimeConfig.public.appEnv === "development") {
@@ -511,7 +543,7 @@ export default {
     },
 
     beforeDestroy() {
-        clearInterval(this.recordingInterval);
+        clearInterval(this.recordingStatusInterval);
         this.obs.disconnect();
     },
 };

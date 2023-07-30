@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   // $development: {
   //   devtools: { enabled: true },
   // },
-
+  
   alias: {
     "~": "",
     "@": "",
@@ -16,6 +16,24 @@ export default defineNuxtConfig({
     "assets": "/assets",
     "public": "/public",
   },
+  app:{
+    head: {
+      titleTemplate: '%s - IQPlus',
+      title: 'VDO control',
+      htmlAttrs: {
+        lang: 'en'
+      },
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { hid: 'description', name: 'description', content: '' },
+        { name: 'format-detection', content: 'telephone=no' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      ]
+    },
+  },
   build: {
     transpile: ['vuetify'],
   },
@@ -23,22 +41,6 @@ export default defineNuxtConfig({
     'vuetify/lib/styles/main.sass',
     '@mdi/font/css/materialdesignicons.min.css',
   ],
-  // head: {
-  //   titleTemplate: '%s - vdo-control',
-  //   title: 'vdo-control',
-  //   htmlAttrs: {
-  //     lang: 'en'
-  //   },
-  //   meta: [
-  //     { charset: 'utf-8' },
-  //     { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-  //     { hid: 'description', name: 'description', content: '' },
-  //     { name: 'format-detection', content: 'telephone=no' }
-  //   ],
-  //   link: [
-  //     { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
-  //   ]
-  // },
   modules: [
     '@nuxtjs/tailwindcss',
 

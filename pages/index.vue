@@ -22,7 +22,7 @@
                 roomShortName="ชายกลาง" 
                 roomId="chaiklang"
                 preferredSceneCollection="Chaiklang_room"
-                obsWebsocketUrl="ws://192.168.1.10:4445"
+                obsWebsocketUrl="ws:///192.168.1.10:4445"
                 :selectedSubject="selectedClass"
                 @start-record-success="clearSelectedTeacher"
             />
