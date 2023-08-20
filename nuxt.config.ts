@@ -7,7 +7,6 @@ export default defineNuxtConfig({
   // $development: {
   //   devtools: { enabled: true },
   // },
-  
   alias: {
     "~": "",
     "@": "",
@@ -16,7 +15,7 @@ export default defineNuxtConfig({
     "assets": "/assets",
     "public": "/public",
   },
-  app:{
+  app: {
     head: {
       titleTemplate: '%s - IQPlus',
       title: 'VDO control',
@@ -45,7 +44,7 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
 
     "nuxt-lodash",
-    
+
     // // Using package name (recommended usage)
     // '@nuxtjs/example',
 
@@ -78,4 +77,10 @@ export default defineNuxtConfig({
       'process.env.DEBUG': false,
     },
   },
+  // devServer: {
+  //   https: {
+  //     key: 'ssl/server.key',
+  //     cert: 'ssl/server.crt',
+  //   }
+  // },
 })

@@ -8,16 +8,17 @@
         </v-card>
         <v-card v-if="isObsConnected">
             <div class="grid grid-cols-2 gap-0">
-                <v-btn prepend-icon="mdi-record-circle-outline" size="x-large" color="green-lighten-4" elevation="2"
+                <v-btn prepend-icon="mdi-record-circle-outline" size="x-large" :color="startRecordBtnColor" elevation="2"
                     :disabled="isRecording" @click="startRecording">
                     <template v-slot:prepend>
-                        <v-icon color="success"></v-icon>
+                        <v-icon></v-icon>
                     </template>
                     <span class="action-btn">อัด{{ roomShortName }}</span>
                 </v-btn>
-                <v-btn prepend-icon="mdi-stop" size="x-large" color="red-lighten-3" elevation="2" @click="askConfirmStopRecord">
+                <v-btn prepend-icon="mdi-stop" size="x-large" :color="stopRecordBtnColor" elevation="2"
+                    @click="askConfirmStopRecord">
                     <template v-slot:prepend>
-                        <v-icon color="red"></v-icon>
+                        <v-icon></v-icon>
                     </template>
                     <span class="action-btn">หยุดอัด{{ roomShortName }}</span>
                 </v-btn>
@@ -71,7 +72,8 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn class="mr-8" color="green" size="x-large" variant="outlined" @click="dialog = false">ยกเลิก</v-btn>
+                    <v-btn class="mr-8" color="green" size="x-large" variant="outlined"
+                        @click="dialog = false">ยกเลิก</v-btn>
                     <v-btn color="red" size="x-large" @click="confirmStopRecord">ยืนยัน</v-btn>
                 </v-card-actions>
             </v-card>
@@ -80,7 +82,7 @@
 </template>
 
 <style>
-.action-btn{
+.action-btn {
     font-size: 0.85em;
 }
 </style>
@@ -126,6 +128,12 @@ export default {
             // const totalMs = this.durationMs * 1000;
             const result = new Date(this.durationMs).toISOString().slice(12, 19);
             return result;
+        },
+        startRecordBtnColor() {
+            return this.isRecording ? "green-lighten-4" : "green";
+        },
+        stopRecordBtnColor() {
+            return this.isRecording ? "red" : "red-lighten-4";
         },
     },
     methods: {
@@ -311,10 +319,10 @@ export default {
                     if (runtimeConfig.public.appEnv === "development") {
                         console.error('Failed to start recording:', err);
                     }
-                    this.alertError('Failed to start recording: '+ err.message)
+                    this.alertError('Failed to start recording: ' + err.message)
                 } else {
                     console.error('Failed to start recording unknown error :', err);
-                    this.alertError('Failed to start recording unknown error : '+ err)
+                    this.alertError('Failed to start recording unknown error : ' + err)
                     return err
                 }
             }
@@ -332,7 +340,7 @@ export default {
             try {
                 if (this.isRecording) {
                     await this.obs.call('StopRecord');
-                    
+
                     this.durationMs = 0;
                 }
             } catch (err: unknown) {
@@ -424,9 +432,9 @@ export default {
                     this.getCurrentProfile();
 
                     // GetRecordStatus start interval
-                    if(!this.recordingStatusInterval){
+                    if (!this.recordingStatusInterval) {
                         let app = this
-                        this.recordingStatusInterval = window.setInterval(function () {app.getRecordStatus()}, 2000);
+                        this.recordingStatusInterval = window.setInterval(function () { app.getRecordStatus() }, 2000);
                     }
                     break;
 
@@ -439,7 +447,7 @@ export default {
                     this.isStopping = false;
                     this.isRecording = false;
                     this.durationMs = 0;
-                    
+
                     break;
                 default:
                     break;
@@ -527,9 +535,9 @@ export default {
             this.getCameraStatus();
             this.getCurrentProfile();
             await this.getRecordStatus();
-            if(!this.recordingStatusInterval && this.isRecording){
+            if (!this.recordingStatusInterval && this.isRecording) {
                 let app = this
-                this.recordingStatusInterval = window.setInterval(function () {app.getRecordStatus()}, 2000);
+                this.recordingStatusInterval = window.setInterval(function () { app.getRecordStatus() }, 2000);
             }
         } catch (err: unknown) {
             if (err instanceof Error) {
