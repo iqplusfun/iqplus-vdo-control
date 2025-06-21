@@ -1,5 +1,5 @@
 export interface Subject {
-    Name: string;
-    Id: string;
-    TeacherId: string;
-};
+    Name: string
+    Id: string
+    TeacherId: string
+}

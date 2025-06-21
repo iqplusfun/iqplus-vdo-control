@@ -1,4 +1,4 @@
-import { Subject } from "~/types/subject"
+import type { Subject } from "~/types/subject"
 const iqplusSubjects: Subject[] = [
     { Id: "not_select", Name: "เลือกวิชา:---", TeacherId: "none" },
     { Id: "Math_p5", Name: "Math ป.5", TeacherId: "fern" },
