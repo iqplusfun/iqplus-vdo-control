@@ -167,6 +167,8 @@ export default {
             lastScreenshot: "",
             hungCheckInterval: 0,
             hungCounter: 0,
+            streamRetryCount: 0,
+            isResettingStream: false,
         }
     },
     computed: {
@@ -314,7 +316,11 @@ export default {
             }
         },
         async checkStreamHealth() {
-            if (!this.isObsConnected || !this.preferredCameraInputName) {
+            if (
+                !this.isObsConnected ||
+                !this.preferredCameraInputName ||
+                this.isResettingStream
+            ) {
                 return
             }
             try {
@@ -333,17 +339,24 @@ export default {
                     this.hungCounter++
                 } else {
                     this.hungCounter = 0
+                    this.streamRetryCount = 0 // Reset counter on successful frame
                 }
 
                 this.lastScreenshot = screenshot.imageData
 
                 if (this.hungCounter > 5) {
                     // 5 checks * 2s interval = 10s
-                    if (!this.isStreamHung) {
+                    if (this.streamRetryCount < 3) {
+                        this.alertInfo(
+                            `Webcam stream frozen. Attempting to reset... (${
+                                this.streamRetryCount + 1
+                            }/3)`
+                        )
+                        await this.resetWebcamStream()
+                    } else if (!this.isStreamHung) {
                         this.isStreamHung = true
-                        this.alertWarning(
-                            "กล้องค้าง ให้รีเฟรชกล้อง",
-                            600 * 1000 // 10 minutes
+                        this.alertError(
+                            "Webcam stream is frozen. Automatic recovery failed after 3 attempts."
                         )
                     }
                 } else {
@@ -354,6 +367,68 @@ export default {
                 if (runtimeConfig.public.appEnv === "development") {
                     console.error("Failed to check stream health:", error)
                 }
+            }
+        },
+        async resetWebcamStream() {
+            if (!this.preferredCameraInputName) return
+            this.isResettingStream = true
+            this.streamRetryCount++
+            this.hungCounter = 0 // Reset hung counter to give it time to recover
+
+            try {
+                // Ensure the source deactivates when not showing. This is key.
+                await this.obs.call("SetInputSettings", {
+                    inputName: this.preferredCameraInputName,
+                    inputSettings: { deactivate_when_not_showing: true },
+                    overlay: true, // Only apply this setting, don't overwrite others
+                })
+
+                // Now, find the source in the current scene and toggle its visibility
+                const sceneName = (
+                    await this.obs.call("GetCurrentProgramScene")
+                ).currentProgramSceneName
+                const sceneItems = await this.obs.call("GetSceneItemList", {
+                    sceneName,
+                })
+                const sceneItem = sceneItems.sceneItems.find(
+                    (item: any) =>
+                        item.sourceName === this.preferredCameraInputName
+                )
+
+                if (sceneItem && typeof sceneItem.sceneItemId === "number") {
+                    // Hide it
+                    await this.obs.call("SetSceneItemEnabled", {
+                        sceneName,
+                        sceneItemId: sceneItem.sceneItemId,
+                        sceneItemEnabled: false,
+                    })
+
+                    // Wait a moment for it to deactivate
+                    await new Promise((resolve) => setTimeout(resolve, 500))
+
+                    // Show it again, forcing a reactivation
+                    await this.obs.call("SetSceneItemEnabled", {
+                        sceneName,
+                        sceneItemId: sceneItem.sceneItemId,
+                        sceneItemEnabled: true,
+                    })
+                    if (runtimeConfig.public.appEnv === "development") {
+                        console.log(
+                            `Webcam stream for ${this.preferredCameraInputName} was reset.`
+                        )
+                    }
+                } else {
+                    if (runtimeConfig.public.appEnv === "development") {
+                        console.warn(
+                            `Could not find ${this.preferredCameraInputName} in current scene to reset it.`
+                        )
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to reset webcam stream:", error)
+                this.alertError("Failed to execute stream reset command.")
+            } finally {
+                this.isResettingStream = false
             }
         },
         async getCurrentProfile() {
@@ -642,7 +717,7 @@ export default {
                 ;(self.alertText = ""), (self.alertShow = false)
             }, 3000)
         },
-        alertInfo(text: string) {
+        alertInfo(text: string, timeout: number = 5000) {
             this.alertText = text
             this.alertLevel = "info"
             this.alertShow = true
@@ -650,7 +725,7 @@ export default {
             let self = this
             setTimeout(function () {
                 ;(self.alertText = ""), (self.alertShow = false)
-            }, 5000)
+            }, timeout)
         },
         alertWarning(text: string, timeout: number = 5000) {
             this.alertText = text
