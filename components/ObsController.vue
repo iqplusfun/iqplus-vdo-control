@@ -42,7 +42,14 @@
                 <div class="flex justify-center">
                     <div class="flex-col">
                         <div>สถานะกล้อง{{ roomShortName }}</div>
-                        <div v-if="isCameraStatusOk">
+                        <div v-if="isStreamHung">
+                            <v-icon
+                                icon="mdi-video-off-outline"
+                                color="orange"
+                            ></v-icon>
+                            กล้องค้าง
+                        </div>
+                        <div v-else-if="isCameraStatusOk">
                             <v-icon
                                 icon="mdi-video-check"
                                 color="green"
@@ -156,6 +163,10 @@ export default {
             alertText: "",
             alertLevel: "", // success, info, warning, error
             dialog: false,
+            isStreamHung: false,
+            lastScreenshot: "",
+            hungCheckInterval: 0,
+            hungCounter: 0,
         }
     },
     computed: {
@@ -299,6 +310,49 @@ export default {
                     console.error("Failed getCameraStatus unknown error :", err)
                     this.isCameraStatusOk = false
                     return Promise.resolve(false)
+                }
+            }
+        },
+        async checkStreamHealth() {
+            if (!this.isObsConnected || !this.preferredCameraInputName) {
+                return
+            }
+            try {
+                const screenshot = await this.obs.call("GetSourceScreenshot", {
+                    sourceName: this.preferredCameraInputName,
+                    imageFormat: "jpeg",
+                    imageWidth: 64,
+                    imageHeight: 36,
+                    imageCompressionQuality: 20,
+                })
+
+                if (
+                    this.lastScreenshot &&
+                    this.lastScreenshot === screenshot.imageData
+                ) {
+                    this.hungCounter++
+                } else {
+                    this.hungCounter = 0
+                }
+
+                this.lastScreenshot = screenshot.imageData
+
+                if (this.hungCounter > 5) {
+                    // 5 checks * 2s interval = 10s
+                    if (!this.isStreamHung) {
+                        this.isStreamHung = true
+                        this.alertWarning(
+                            "กล้องค้าง ให้รีเฟรชกล้อง",
+                            600 * 1000 // 10 minutes
+                        )
+                    }
+                } else {
+                    this.isStreamHung = false
+                }
+            } catch (error) {
+                // hide error from user
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("Failed to check stream health:", error)
                 }
             }
         },
@@ -598,7 +652,7 @@ export default {
                 ;(self.alertText = ""), (self.alertShow = false)
             }, 5000)
         },
-        alertWarning(text: string) {
+        alertWarning(text: string, timeout: number = 5000) {
             this.alertText = text
             this.alertLevel = "warning"
             this.alertShow = true
@@ -606,9 +660,9 @@ export default {
             let self = this
             setTimeout(function () {
                 ;(self.alertText = ""), (self.alertShow = false)
-            }, 5000)
+            }, timeout)
         },
-        alertError(text: string) {
+        alertError(text: string, timeout: number = 5000) {
             this.alertText = text
             this.alertLevel = "error"
             this.alertShow = true
@@ -616,7 +670,7 @@ export default {
             let self = this
             setTimeout(function () {
                 ;(self.alertText = ""), (self.alertShow = false)
-            }, 5000)
+            }, timeout)
         },
     },
 
@@ -632,6 +686,12 @@ export default {
                     app.getRecordStatus()
                 }, 2000)
             }
+
+            if (!this.hungCheckInterval) {
+                this.hungCheckInterval = window.setInterval(() => {
+                    this.checkStreamHealth()
+                }, 2000) // Check every 2 seconds
+            }
         } catch (err: unknown) {
             if (err instanceof Error) {
                 if (runtimeConfig.public.appEnv === "development") {
@@ -645,6 +705,7 @@ export default {
 
     beforeDestroy() {
         clearInterval(this.recordingStatusInterval)
+        clearInterval(this.hungCheckInterval)
         this.obs.disconnect()
     },
 }
