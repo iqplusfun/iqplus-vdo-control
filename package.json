@@ -2,9 +2,9 @@
     "name": "nuxt-app",
     "private": true,
     "scripts": {
-        "build": "APP_VERSION=$(git describe --tags --abbrev=0) nuxt build",
+        "build": "nuxt build",
         "dev": "nuxt dev",
-        "generate": "APP_VERSION=$(git describe --tags --abbrev=0) nuxt generate",
+        "generate": "nuxt generate",
         "preview": "nuxt preview",
         "postinstall": "nuxt prepare"
     },

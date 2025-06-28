@@ -6,5 +6,5 @@ export default defineAppConfig({
             primary: "#ff0000",
         },
     },
-    version: process.env.APP_VERSION || "dev",
+    version: process.env.NUXT_PUBLIC_APP_VERSION || "dev",
 })
