@@ -54,12 +54,17 @@
             />
         </div>
     </div>
+    <div class="text-center text-gray-500 text-xs mt-4">
+        <p>VDO Control version {{ appConfig.version }}</p>
+    </div>
 </template>
 <script setup lang="ts">
 import ObsController from "~/components/ObsController.vue"
 import iqplusSubjects from "~/constant/subjects"
 import iqplusTeachers from "~/constant/teachers"
+const appConfig = useAppConfig()
 </script>
+
 <script lang="ts">
 export default {
     name: "index",
