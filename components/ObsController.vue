@@ -501,6 +501,8 @@ export default {
                     console.log("StartRecord resp", response)
                 }
 
+                this.streamRetryCount = 0 // Reset retry counter on new recording
+
                 // tell parent
                 this.$emit("StartRecordSuccess")
             } catch (err: unknown) {
