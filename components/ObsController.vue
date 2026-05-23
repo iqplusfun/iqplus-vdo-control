@@ -119,7 +119,7 @@
                         <div class="text-h5 font-weight-bold font-mono mt-1">
                             {{ durationString }}
                         </div>
-                        <div class="text-caption text-medium-emphasis mt-1">
+                        <div class="text-subtitle-1 font-weight-medium mt-1">
                             {{ currentProfileReadable() }}
                         </div>
                     </div>
