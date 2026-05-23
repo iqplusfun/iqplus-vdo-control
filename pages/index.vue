@@ -1,5 +1,5 @@
 <template>
-    <v-app-bar flat color="surface" border="b">
+    <v-app-bar flat>
         <v-app-bar-title class="font-weight-bold">IQPlus VDO Control</v-app-bar-title>
         <template #append>
             <v-chip size="small" variant="outlined" class="mr-4">
