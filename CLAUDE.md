@@ -48,7 +48,10 @@ Profiles follow the pattern `{subjectId}_{roomId}_profile` (e.g. `Math_p5_green_
 - `types/teacher.ts`, `types/subject.ts` — TypeScript interfaces for the above
 
 ### Runtime config (`nuxt.config.ts`)
-`APP_ENV`, `API_BASE`, `OTHER_URL` can be set via environment variables (see `.env.example`). The server plugin `server/plugins/version.ts` reads the git tag and injects it as `appVersion`.
+`APP_ENV`, `API_BASE`, `OTHER_URL` can be set via environment variables (see `.env.example`). `appVersion` is resolved at **build time** via `resolveVersion()` in `nuxt.config.ts` — it prefers `APP_VERSION` env var, then falls back to `git describe --tags --abbrev=0`. The server plugin `server/plugins/version.ts` is intentionally empty (the runtime env override pattern does not work for static/SPA deployments).
+
+### Deployment
+The app is deployed as a **static site** (no persistent Nitro server). All `runtimeConfig.public` values are embedded in the JS bundle at `nuxt build` time. Set env vars in the CI/CD build environment, not at serve time.
 
 ## Git
 

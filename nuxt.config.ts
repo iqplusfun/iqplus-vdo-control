@@ -1,4 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { execSync } from "child_process"
+
+const resolveVersion = (): string => {
+    if (process.env.APP_VERSION) return process.env.APP_VERSION
+    try {
+        return execSync("git describe --tags --abbrev=0").toString().trim()
+    } catch {
+        return "dev"
+    }
+}
+
 export default defineNuxtConfig({
     // $production: {
     //   devtools: { enabled: false },
@@ -72,7 +83,7 @@ export default defineNuxtConfig({
             appEnv: process.env.APP_ENV || "development",
             apiBase: process.env.API_BASE || "default_api_url",
             otherUrl: process.env.OTHER_URL || "default_other_url",
-            appVersion: process.env.APP_VERSION || "dev",
+            appVersion: resolveVersion(),
         },
     },
     vite: {
