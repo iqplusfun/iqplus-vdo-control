@@ -82,6 +82,16 @@
                         prepend-icon="mdi-video-off-outline"
                         variant="tonal"
                     >กล้องค้าง</v-chip>
+                    <v-btn
+                        v-if="isStreamHung"
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                        :loading="isResettingStream"
+                        class="mt-2"
+                        prepend-icon="mdi-camera-retake"
+                        @click="manualResetCamera"
+                    >รีเซ็ตกล้อง</v-btn>
                     <v-chip
                         v-else-if="isCameraStatusOk"
                         color="success"
@@ -507,6 +517,13 @@ export default {
             } finally {
                 this.isStarting = false
             }
+        },
+
+        async manualResetCamera() {
+            this.streamRetryCount = 0
+            this.hungCounter = 0
+            this.isStreamHung = false
+            await this.resetWebcamStream()
         },
 
         askConfirmStopRecord() {
