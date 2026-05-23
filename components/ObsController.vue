@@ -38,7 +38,7 @@
                         size="large"
                         rounded="lg"
                         :color="isRecording ? 'success-lighten-3' : 'success'"
-                        :disabled="isRecording"
+                        :disabled="isRecording || isStreamHung"
                         @click="startRecording"
                     >
                         <v-progress-circular
