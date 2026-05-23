@@ -3,7 +3,7 @@
         <v-app-bar-title class="font-weight-bold">IQPlus VDO Control</v-app-bar-title>
         <template #append>
             <v-chip size="small" variant="outlined" class="mr-4">
-                v{{ runtimeConfig.public.appVersion }}
+                {{ runtimeConfig.public.appVersion }}
             </v-chip>
         </template>
     </v-app-bar>
