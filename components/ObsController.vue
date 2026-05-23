@@ -1,130 +1,185 @@
 <template>
-    <div>
-        <v-alert
-            :model-value="alertShow"
-            :text="alertText"
-            :color="alertLevel"
-        ></v-alert>
-        <v-card v-if="!isObsConnected">
-            <div class="grid grid-cols-2 gap-0 pt-4 pb-2">
-                ไม่สามารถเชื่อมต่อ OBS {{ roomName }}
-            </div>
-        </v-card>
-        <v-card v-if="isObsConnected">
-            <div class="grid grid-cols-2 gap-0">
-                <v-btn
-                    prepend-icon="mdi-record-circle-outline"
-                    size="x-large"
-                    :color="startRecordBtnColor"
-                    elevation="2"
-                    :disabled="isRecording"
-                    @click="startRecording"
-                >
-                    <template v-slot:prepend>
-                        <v-icon></v-icon>
-                    </template>
-                    <span class="action-btn">อัด{{ roomShortName }}</span>
-                </v-btn>
-                <v-btn
-                    prepend-icon="mdi-stop"
-                    size="x-large"
-                    :color="stopRecordBtnColor"
-                    elevation="2"
-                    @click="askConfirmStopRecord"
-                >
-                    <template v-slot:prepend>
-                        <v-icon></v-icon>
-                    </template>
-                    <span class="action-btn">หยุดอัด{{ roomShortName }}</span>
+    <v-card elevation="2">
+        <v-progress-linear v-if="isConnecting" indeterminate color="primary" />
+
+        <v-card-title class="d-flex align-center justify-space-between py-3 px-4">
+            <span class="text-h6 font-weight-bold">{{ roomName }}</span>
+            <v-chip
+                size="small"
+                :color="isObsConnected ? 'success' : 'error'"
+                variant="tonal"
+            >
+                {{ isObsConnected ? "เชื่อมต่อแล้ว" : "ไม่ได้เชื่อมต่อ" }}
+            </v-chip>
+        </v-card-title>
+
+        <v-divider />
+
+        <!-- Disconnected empty state -->
+        <v-card-text v-if="!isObsConnected && !isConnecting">
+            <div class="d-flex flex-column align-center py-6">
+                <v-icon icon="mdi-lan-disconnect" size="56" color="grey" />
+                <p class="text-body-2 text-medium-emphasis mt-3 text-center">
+                    {{ connectionError || "ไม่สามารถเชื่อมต่อ OBS" }}
+                </p>
+                <v-btn variant="outlined" class="mt-4" @click="connectOBS">
+                    ลองใหม่
                 </v-btn>
             </div>
-            <div class="grid grid-cols-2 gap-0 pt-4 pb-2">
-                <div class="flex justify-center">
-                    <div class="flex-col">
-                        <div>สถานะกล้อง{{ roomShortName }}</div>
-                        <div v-if="isStreamHung">
-                            <v-icon
-                                icon="mdi-video-off-outline"
-                                color="orange"
-                            ></v-icon>
-                            กล้องค้าง
-                        </div>
-                        <div v-else-if="isCameraStatusOk">
-                            <v-icon
-                                icon="mdi-video-check"
-                                color="green"
-                            ></v-icon>
-                            ปกติ
-                        </div>
-                        <div v-else>
-                            <v-icon
-                                icon="mdi-video-off-outline"
-                                color="red"
-                            ></v-icon>
-                            ยังไม่เปิดกล้อง
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-center">
-                    <div v-if="isStopping">
-                        <p>
-                            <v-icon
-                                icon="mdi-video-wireless"
-                                color="red"
-                                class="animate-pulse"
-                            ></v-icon>
-                            {{ roomShortName }}กำลังหยุด
-                        </p>
-                        <p>{{ currentProfileReadable() }}</p>
-                    </div>
-                    <div v-else-if="isRecording">
-                        <p>
-                            <v-icon
-                                icon="mdi-video-wireless"
-                                color="red"
-                                class="animate-pulse"
-                            ></v-icon>
-                            {{ roomShortName }}กำลังอัด
-                        </p>
-                        <p>{{ currentProfileReadable() }}</p>
-                        <p>ความยาว : {{ durationString }}</p>
-                    </div>
-                    <div v-else>
-                        <p>
-                            <v-icon
-                                icon="mdi-video-wireless"
-                                color="grey"
-                            ></v-icon>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </v-card>
-        <v-dialog v-model="dialog" persistent max-width="600px">
-            <v-card>
-                <v-card-text> ต้องการหยุดอัด ? </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
+        </v-card-text>
+
+        <!-- Connected UI -->
+        <v-card-text v-if="isObsConnected">
+            <!-- Action buttons -->
+            <v-row dense>
+                <v-col cols="6">
                     <v-btn
-                        class="mr-8"
-                        color="green"
-                        size="x-large"
+                        block
+                        size="large"
+                        rounded="lg"
+                        :color="isRecording ? 'success-lighten-3' : 'success'"
+                        :disabled="isRecording"
+                        @click="startRecording"
+                    >
+                        <v-progress-circular
+                            v-if="isStarting"
+                            indeterminate
+                            size="20"
+                            width="2"
+                            class="mr-2"
+                        />
+                        <v-icon v-else icon="mdi-record-circle-outline" start />
+                        อัด{{ roomShortName }}
+                    </v-btn>
+                </v-col>
+                <v-col cols="6">
+                    <v-btn
+                        block
+                        size="large"
+                        rounded="lg"
+                        color="error"
+                        :disabled="!isRecording || isStopping"
+                        @click="askConfirmStopRecord"
+                    >
+                        <v-icon icon="mdi-stop" start />
+                        หยุดอัด{{ roomShortName }}
+                    </v-btn>
+                </v-col>
+            </v-row>
+
+            <v-divider class="my-4" />
+
+            <!-- Status row -->
+            <v-row>
+                <!-- Camera status -->
+                <v-col cols="6" class="d-flex flex-column align-center">
+                    <div class="text-caption text-medium-emphasis mb-2">
+                        สถานะกล้อง{{ roomShortName }}
+                    </div>
+                    <v-chip
+                        v-if="isStreamHung"
+                        color="warning"
+                        prepend-icon="mdi-video-off-outline"
+                        variant="tonal"
+                    >กล้องค้าง</v-chip>
+                    <v-chip
+                        v-else-if="isCameraStatusOk"
+                        color="success"
+                        prepend-icon="mdi-video-check"
+                        variant="tonal"
+                    >ปกติ</v-chip>
+                    <v-chip
+                        v-else
+                        color="error"
+                        prepend-icon="mdi-video-off-outline"
+                        variant="tonal"
+                    >ยังไม่เปิดกล้อง</v-chip>
+                </v-col>
+
+                <!-- Recording status -->
+                <v-col cols="6" class="d-flex flex-column align-center">
+                    <div v-if="isStopping" class="text-center">
+                        <v-chip
+                            color="warning"
+                            prepend-icon="mdi-stop"
+                            variant="tonal"
+                            class="animate-pulse mb-2"
+                        >{{ roomShortName }}กำลังหยุด</v-chip>
+                        <div class="text-caption text-medium-emphasis mt-1">
+                            {{ currentProfileReadable() }}
+                        </div>
+                    </div>
+                    <div v-else-if="isRecording" class="text-center">
+                        <v-chip
+                            color="error"
+                            prepend-icon="mdi-record-circle"
+                            variant="tonal"
+                            class="animate-pulse mb-2"
+                        >{{ roomShortName }}กำลังอัด</v-chip>
+                        <div class="text-h5 font-weight-bold font-mono mt-1">
+                            {{ durationString }}
+                        </div>
+                        <div class="text-caption text-medium-emphasis mt-1">
+                            {{ currentProfileReadable() }}
+                        </div>
+                    </div>
+                    <div v-else class="text-center">
+                        <v-chip
+                            color="default"
+                            prepend-icon="mdi-video-wireless"
+                            variant="tonal"
+                        >พร้อมอัด</v-chip>
+                    </div>
+                </v-col>
+            </v-row>
+        </v-card-text>
+
+        <!-- Stop confirmation dialog -->
+        <v-dialog v-model="dialog" persistent max-width="400px">
+            <v-card>
+                <v-card-title>หยุดอัด {{ roomName }}?</v-card-title>
+                <v-card-text>
+                    <div class="text-body-1">{{ currentProfileReadable() }}</div>
+                    <div class="text-h6 font-mono mt-1">{{ durationString }}</div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn
+                        color="success"
                         variant="outlined"
                         @click="dialog = false"
-                        >ยกเลิก</v-btn
-                    >
-                    <v-btn color="red" size="x-large" @click="confirmStopRecord"
-                        >ยืนยัน</v-btn
-                    >
+                    >ยกเลิก</v-btn>
+                    <v-btn
+                        color="error"
+                        prepend-icon="mdi-stop"
+                        @click="confirmStopRecord"
+                    >ยืนยัน</v-btn>
                 </v-card-actions>
             </v-card>
         </v-dialog>
-    </div>
+
+        <!-- Alert snackbar -->
+        <v-snackbar
+            v-model="alertShow"
+            :color="alertLevel"
+            location="bottom"
+            :timeout="alertTimeoutMs"
+        >
+            {{ alertText }}
+            <template #actions>
+                <v-btn
+                    icon="mdi-close"
+                    variant="text"
+                    @click="alertShow = false"
+                />
+            </template>
+        </v-snackbar>
+    </v-card>
 </template>
 
 <style>
-.action-btn {
-    font-size: 0.85em;
+.font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 </style>
 
@@ -132,11 +187,12 @@
 import OBSWebSocket, { EventSubscription } from "obs-websocket-js"
 import type { OBSEventTypes } from "obs-websocket-js"
 
-const emit = defineEmits(["StartRecordSuccess", "test"])
+const emit = defineEmits(["StartRecordSuccess"])
 </script>
 
 <script lang="ts">
 const runtimeConfig = useRuntimeConfig()
+
 export default {
     props: {
         roomName: String,
@@ -144,7 +200,7 @@ export default {
         roomId: String,
         preferredSceneCollection: String,
         preferredCameraInputName: String,
-        preferredInputNameList: Array<String>,
+        preferredInputNameList: Array as () => string[],
         obsWebsocketUrl: String,
         selectedSubject: String,
     },
@@ -152,16 +208,20 @@ export default {
         return {
             obs: new OBSWebSocket(),
             isObsConnected: false,
+            isConnecting: false,
+            connectionError: "",
             isCameraStatusOk: false,
             isRecording: false,
+            isStarting: false,
             isStopping: false,
             durationMs: 0,
             recordingStatusInterval: 0,
-            currentSceneCollection: "", // Unseen, Green_room, Chaiklang_room
+            currentSceneCollection: "",
             currentProfile: "",
             alertShow: false,
             alertText: "",
-            alertLevel: "", // success, info, warning, error
+            alertLevel: "",
+            alertTimeoutMs: 3000,
             dialog: false,
             isStreamHung: false,
             lastScreenshot: "",
@@ -173,34 +233,20 @@ export default {
     },
     computed: {
         durationString() {
-            // const totalMs = this.durationMs * 1000;
-            const result = new Date(this.durationMs).toISOString().slice(12, 19)
-            return result
-        },
-        startRecordBtnColor() {
-            return this.isRecording ? "green-lighten-4" : "green"
-        },
-        stopRecordBtnColor() {
-            return this.isRecording ? "red" : "red-lighten-4"
+            return new Date(this.durationMs).toISOString().slice(12, 19)
         },
     },
     methods: {
         async connectOBS() {
-            console.log(runtimeConfig.public.appEnv)
-
+            this.isConnecting = true
+            this.connectionError = ""
             try {
-                let obsPassword = undefined
                 const { obsWebSocketVersion, negotiatedRpcVersion } =
-                    await this.obs.connect(this.obsWebsocketUrl, obsPassword, {
+                    await this.obs.connect(this.obsWebsocketUrl, undefined, {
                         eventSubscriptions:
-                            EventSubscription.All | //  all non-high-volume events.
-                            // EventSubscription.General |
-                            // EventSubscription.Outputs |
-
-                            // EventSubscription.InputVolumeMeters |
+                            EventSubscription.All |
                             EventSubscription.InputActiveStateChanged |
                             EventSubscription.InputShowStateChanged,
-                        // rpcVersion: 1,
                     })
                 if (runtimeConfig.public.appEnv === "development") {
                     console.log(
@@ -210,37 +256,26 @@ export default {
 
                 this.isObsConnected = true
 
-                this.obs.on(
-                    "CurrentProfileChanged",
-                    this.onCurrentProfileChanged
-                )
+                this.obs.on("CurrentProfileChanged", this.onCurrentProfileChanged)
                 this.obs.on("RecordStateChanged", this.onRecordStateChanged)
-                this.obs.on(
-                    "VirtualcamStateChanged",
-                    this.onVirtualcamStateChanged
-                )
-                this.obs.on(
-                    "CurrentSceneCollectionChanged",
-                    this.onCurrentSceneCollectionChanged
-                )
-
-                this.obs.on(
-                    "InputActiveStateChanged",
-                    this.onInputActiveStateChanged
-                )
-                this.obs.on(
-                    "InputShowStateChanged",
-                    this.onInputShowStateChanged
-                )
+                this.obs.on("VirtualcamStateChanged", this.onVirtualcamStateChanged)
+                this.obs.on("CurrentSceneCollectionChanged", this.onCurrentSceneCollectionChanged)
+                this.obs.on("InputActiveStateChanged", this.onInputActiveStateChanged)
+                this.obs.on("InputShowStateChanged", this.onInputShowStateChanged)
                 this.obs.on("InputVolumeMeters", this.onInputVolumeMeters)
             } catch (error) {
                 this.isObsConnected = false
-                console.error("Failed to connect to OBS:", error)
+                const msg = error instanceof Error ? error.message : String(error)
+                this.connectionError = msg
+                this.alertError("เชื่อมต่อ OBS ไม่ได้: " + msg)
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("Failed to connect to OBS:", error)
+                }
+            } finally {
+                this.isConnecting = false
             }
         },
-        /////////
-        // Data builder
-        ////////
+
         selectedProfileName() {
             if (
                 this.selectedSubject === "" ||
@@ -250,71 +285,50 @@ export default {
             }
             return this.selectedSubject + "_" + this.roomId + "_profile"
         },
+
         currentProfileReadable(): string {
             if (this.currentProfile.length) {
-                let p = this.currentProfile.split("_")
+                const p = this.currentProfile.split("_")
                 return p[0] + " " + p[1]
             }
             return ""
         },
 
-        /////////
-        // Request handler
-        ////////
         async getCameraStatus(): Promise<boolean> {
             try {
                 const preferredInputName = this.preferredCameraInputName ?? ""
                 const scene = await this.obs.call("GetSceneCollectionList")
-                if (runtimeConfig.public.appEnv === "development") {
-                    console.log("GetSceneCollectionList", scene)
-                }
-
                 const input = await this.obs.call("GetInputList")
-                if (runtimeConfig.public.appEnv === "development") {
-                    console.log("GetInputList", input)
-                }
-
                 const sourceActive = await this.obs.call("GetSourceActive", {
                     sourceName: preferredInputName,
                 })
+
                 if (runtimeConfig.public.appEnv === "development") {
-                    console.log("GetSourceActive", sourceActive)
+                    console.log("getCameraStatus", { scene, input, sourceActive })
                 }
 
-                let mainInputIndex = input.inputs.findIndex(
-                    (p: any) => p.inputName === preferredInputName
+                const mainInputIndex = input.inputs.findIndex(
+                    (p: { inputName: string }) => p.inputName === preferredInputName
                 )
-                if (runtimeConfig.public.appEnv === "development") {
-                    console.log("inputIndex ", mainInputIndex)
-                }
 
-                if (
-                    scene.currentSceneCollectionName ===
-                        this.preferredSceneCollection &&
+                const ok =
+                    scene.currentSceneCollectionName === this.preferredSceneCollection &&
                     sourceActive.videoActive &&
                     mainInputIndex >= 0
-                ) {
-                    this.isCameraStatusOk = true
-                    return Promise.resolve(true)
-                }
 
-                this.isCameraStatusOk = false
-                return Promise.resolve(false)
+                this.isCameraStatusOk = ok
+                return ok
             } catch (err: unknown) {
-                if (err instanceof Error) {
-                    // Inside this block, err is known to be a Error
-                    if (runtimeConfig.public.appEnv === "development") {
-                        console.error(err)
-                    }
-                    this.isCameraStatusOk = false
-                    return Promise.resolve(false)
-                } else {
-                    console.error("Failed getCameraStatus unknown error :", err)
-                    this.isCameraStatusOk = false
-                    return Promise.resolve(false)
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("getCameraStatus error:", err)
+                } else if (!(err instanceof Error)) {
+                    console.error("getCameraStatus unknown error:", err)
                 }
+                this.isCameraStatusOk = false
+                return false
             }
         },
+
         async checkStreamHealth() {
             if (
                 !this.isObsConnected ||
@@ -339,13 +353,13 @@ export default {
                     this.hungCounter++
                 } else {
                     this.hungCounter = 0
-                    this.streamRetryCount = 0 // Reset counter on successful frame
+                    this.streamRetryCount = 0
                 }
 
                 this.lastScreenshot = screenshot.imageData
 
                 if (this.hungCounter > 5) {
-                    // 5 checks * 2s interval = 10s
+                    // 5 checks × 2 s interval = 10 s of frozen frames before recovery
                     if (this.streamRetryCount < 3) {
                         this.alertInfo(
                             `Webcam stream frozen. Attempting to reset... (${
@@ -363,66 +377,62 @@ export default {
                     this.isStreamHung = false
                 }
             } catch (error) {
-                // hide error from user
                 if (runtimeConfig.public.appEnv === "development") {
                     console.error("Failed to check stream health:", error)
                 }
             }
         },
+
         async resetWebcamStream() {
             if (!this.preferredCameraInputName) return
             this.isResettingStream = true
             this.streamRetryCount++
-            this.hungCounter = 0 // Reset hung counter to give it time to recover
+            this.hungCounter = 0
 
             try {
-                // Ensure the source deactivates when not showing. This is key.
                 await this.obs.call("SetInputSettings", {
                     inputName: this.preferredCameraInputName,
                     inputSettings: { deactivate_when_not_showing: true },
-                    overlay: true, // Only apply this setting, don't overwrite others
+                    overlay: true,
                 })
 
-                // Now, find the source in the current scene and toggle its visibility
                 const sceneName = (
                     await this.obs.call("GetCurrentProgramScene")
                 ).currentProgramSceneName
+
                 const sceneItems = await this.obs.call("GetSceneItemList", {
                     sceneName,
                 })
+
                 const sceneItem = sceneItems.sceneItems.find(
-                    (item: any) =>
+                    (item: { sourceName: string; sceneItemId: number }) =>
                         item.sourceName === this.preferredCameraInputName
                 )
 
                 if (sceneItem && typeof sceneItem.sceneItemId === "number") {
-                    // Hide it
                     await this.obs.call("SetSceneItemEnabled", {
                         sceneName,
                         sceneItemId: sceneItem.sceneItemId,
                         sceneItemEnabled: false,
                     })
 
-                    // Wait a moment for it to deactivate
                     await new Promise((resolve) => setTimeout(resolve, 500))
 
-                    // Show it again, forcing a reactivation
                     await this.obs.call("SetSceneItemEnabled", {
                         sceneName,
                         sceneItemId: sceneItem.sceneItemId,
                         sceneItemEnabled: true,
                     })
+
                     if (runtimeConfig.public.appEnv === "development") {
                         console.log(
                             `Webcam stream for ${this.preferredCameraInputName} was reset.`
                         )
                     }
-                } else {
-                    if (runtimeConfig.public.appEnv === "development") {
-                        console.warn(
-                            `Could not find ${this.preferredCameraInputName} in current scene to reset it.`
-                        )
-                    }
+                } else if (runtimeConfig.public.appEnv === "development") {
+                    console.warn(
+                        `Could not find ${this.preferredCameraInputName} in current scene.`
+                    )
                 }
             } catch (error) {
                 console.error("Failed to reset webcam stream:", error)
@@ -431,6 +441,7 @@ export default {
                 this.isResettingStream = false
             }
         },
+
         async getCurrentProfile() {
             try {
                 const profile = await this.obs.call("GetProfileList")
@@ -439,253 +450,176 @@ export default {
                     console.log("getCurrentProfile", profile)
                 }
             } catch (err: unknown) {
-                if (err instanceof Error) {
-                    // Inside this block, err is known to be a Error
-                    if (runtimeConfig.public.appEnv === "development") {
-                        console.error(err)
-                    }
-                } else {
-                    console.error("Failed get profile unknown error :", err)
-                    return err
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("getCurrentProfile error:", err)
+                } else if (!(err instanceof Error)) {
+                    console.error("Failed get profile unknown error:", err)
                 }
             }
         },
+
         async getRecordStatus() {
             try {
                 const status = await this.obs.call("GetRecordStatus")
-
                 this.isRecording = status.outputActive
                 this.durationMs = status.outputDuration
                 if (runtimeConfig.public.appEnv === "development") {
                     console.log("getRecordStatus", status)
                 }
-
                 return status
             } catch (err: unknown) {
-                if (err instanceof Error) {
-                    // Inside this block, err is known to be a Error
-                    if (runtimeConfig.public.appEnv === "development") {
-                        console.error(err)
-                    }
-                } else {
-                    return err
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("getRecordStatus error:", err)
                 }
             }
         },
-        async startRecording() {
-            try {
-                if (this.isRecording) {
-                    this.alertError("กำลังอัดอยู่")
-                }
 
+        async startRecording() {
+            if (this.isRecording) {
+                this.alertError("กำลังอัดอยู่")
+                return
+            }
+            this.isStarting = true
+            try {
                 if (
-                    this.currentSceneCollection !==
-                    this.preferredSceneCollection
+                    this.currentSceneCollection !== this.preferredSceneCollection
                 ) {
                     await this.changeSceneCollection(
-                        this.preferredSceneCollection
-                            ? this.preferredSceneCollection
-                            : ""
+                        this.preferredSceneCollection ?? ""
                     )
                 }
 
-                const profileResp = await this.obs.call("SetCurrentProfile", {
+                await this.obs.call("SetCurrentProfile", {
                     profileName: this.selectedProfileName(),
                 })
-                if (runtimeConfig.public.appEnv === "development") {
-                    console.log("SetCurrentProfile resp", profileResp)
-                }
 
-                const response = await this.obs.call("StartRecord")
-                if (runtimeConfig.public.appEnv === "development") {
-                    console.log("StartRecord resp", response)
-                }
+                await this.obs.call("StartRecord")
 
-                this.streamRetryCount = 0 // Reset retry counter on new recording
-
-                // tell parent
+                this.streamRetryCount = 0
+                this.alertSuccess("เริ่มอัดแล้ว")
                 this.$emit("StartRecordSuccess")
             } catch (err: unknown) {
-                if (err instanceof Error) {
-                    // Inside this block, err is known to be a Error
-                    if (runtimeConfig.public.appEnv === "development") {
-                        console.error("Failed to start recording:", err)
-                    }
-                    this.alertError("Failed to start recording: " + err.message)
-                } else {
-                    console.error(
-                        "Failed to start recording unknown error :",
-                        err
-                    )
-                    this.alertError(
-                        "Failed to start recording unknown error : " + err
-                    )
-                    return err
+                const msg = err instanceof Error ? err.message : String(err)
+                this.alertError("Failed to start recording: " + msg)
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("Failed to start recording:", err)
                 }
+            } finally {
+                this.isStarting = false
             }
         },
-        async askConfirmStopRecord() {
+
+        askConfirmStopRecord() {
             if (this.isRecording) {
                 this.dialog = true
             }
         },
+
         async confirmStopRecord() {
             this.dialog = false
-            this.stopRecording()
+            await this.stopRecording()
         },
+
         async stopRecording() {
             try {
                 if (this.isRecording) {
                     await this.obs.call("StopRecord")
-
                     this.durationMs = 0
                 }
             } catch (err: unknown) {
-                if (err instanceof Error) {
-                    // Inside this block, err is known to be a Error
-                    if (runtimeConfig.public.appEnv === "development") {
-                        console.error("Failed to stop recording:", err)
-                    }
-                } else {
-                    return err
+                const msg = err instanceof Error ? err.message : String(err)
+                this.alertError("Failed to stop recording: " + msg)
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("Failed to stop recording:", err)
                 }
             }
         },
+
         async changeSceneCollection(name: string) {
             try {
-                if (this.isRecording) {
-                    return
-                }
-
+                if (this.isRecording) return
                 if (
-                    this.currentSceneCollection ===
-                    this.preferredSceneCollection
+                    this.currentSceneCollection === this.preferredSceneCollection
                 ) {
                     return
                 }
 
-                const changeSceneResponse = await this.obs.call(
-                    "SetCurrentSceneCollection",
-                    {
-                        sceneCollectionName: name,
-                    }
-                )
+                await this.obs.call("SetCurrentSceneCollection", {
+                    sceneCollectionName: name,
+                })
 
                 if (runtimeConfig.public.appEnv === "development") {
-                    console.log(
-                        "SetCurrentSceneCollection resp",
-                        changeSceneResponse
-                    )
+                    console.log("SetCurrentSceneCollection", name)
                 }
             } catch (err: unknown) {
-                if (err instanceof Error) {
-                    // Inside this block, err is known to be a Error
-                    if (runtimeConfig.public.appEnv === "development") {
-                        console.error("Failed to change scene collection:", err)
-                    }
-                    this.alertError(err.message)
-                } else {
-                    console.error(
-                        "Failed to change scene collection unknown error :",
-                        err
-                    )
-                    return err
+                const msg = err instanceof Error ? err.message : String(err)
+                this.alertError(msg)
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("Failed to change scene collection:", err)
                 }
             }
         },
 
-        /////////
-        // Event handler
-        ////////
         onCurrentProfileChanged(event: OBSEventTypes["CurrentProfileChanged"]) {
-            // profileName	String	Name of the new profile
+            this.currentProfile = event.profileName
             if (runtimeConfig.public.appEnv === "development") {
                 console.log("onCurrentProfileChanged", event.profileName)
             }
         },
+
         onRecordStateChanged(event: OBSEventTypes["RecordStateChanged"]) {
-            // outputActive	Boolean	Whether the output is active
-            // outputState	String	The specific state of the output
-            // outputPath	String	File name for the saved recording, if record stopped. null otherwise
-
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_UNKNOWN
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_STARTING
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_STARTED
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_STOPPING
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_STOPPED
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_RECONNECTING
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_RECONNECTED
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_PAUSED
-            // ObsOutputState::OBS_WEBSOCKET_OUTPUT_RESUMED
-
             if (runtimeConfig.public.appEnv === "development") {
                 console.log("onRecordStateChanged", event)
             }
-            if (event.outputActive) {
-                // set button's state
-            }
+
             switch (event.outputState) {
                 case "OBS_WEBSOCKET_OUTPUT_STARTING":
-                // data : {
-                //     "outputActive": false,
-                //     "outputPath": null,
-                //     "outputState": "OBS_WEBSOCKET_OUTPUT_STARTING"
-                // }
-
+                // falls through
                 case "OBS_WEBSOCKET_OUTPUT_STARTED":
                     this.isRecording = true
-
-                    // update current profile
                     this.getCurrentProfile()
-
-                    // GetRecordStatus start interval
                     if (!this.recordingStatusInterval) {
-                        let app = this
-                        this.recordingStatusInterval = window.setInterval(
-                            function () {
-                                app.getRecordStatus()
-                            },
-                            2000
-                        )
+                        this.recordingStatusInterval = window.setInterval(() => {
+                            this.getRecordStatus()
+                        }, 2000)
                     }
                     break
 
                 case "OBS_WEBSOCKET_OUTPUT_STOPPING":
                     this.isStopping = true
                     break
+
                 case "OBS_WEBSOCKET_OUTPUT_STOPPED":
-                    // GetRecordStatus stop interval
                     clearInterval(this.recordingStatusInterval)
+                    this.recordingStatusInterval = 0
                     this.isStopping = false
                     this.isRecording = false
                     this.durationMs = 0
-
                     break
+
                 default:
                     break
             }
         },
-        onVirtualcamStateChanged(
-            event: OBSEventTypes["VirtualcamStateChanged"]
-        ) {
-            // outputActive	Boolean	Whether the output is active
-            // outputState	String	The specific state of the output
+
+        onVirtualcamStateChanged(event: OBSEventTypes["VirtualcamStateChanged"]) {
             if (runtimeConfig.public.appEnv === "development") {
                 console.log("onVirtualcamStateChanged", event)
             }
         },
-        onInputActiveStateChanged(
-            event: OBSEventTypes["InputActiveStateChanged"]
-        ) {
+
+        onInputActiveStateChanged(event: OBSEventTypes["InputActiveStateChanged"]) {
             if (runtimeConfig.public.appEnv === "development") {
                 console.log("InputActiveStateChanged", event)
             }
         },
+
         onInputShowStateChanged(event: OBSEventTypes["InputShowStateChanged"]) {
             if (runtimeConfig.public.appEnv === "development") {
                 console.log("InputShowStateChanged", event)
             }
         },
+
         onCurrentSceneCollectionChanged(
             event: OBSEventTypes["CurrentSceneCollectionChanged"]
         ) {
@@ -697,57 +631,37 @@ export default {
             this.getCurrentProfile()
             this.getRecordStatus()
         },
-        onInputVolumeMeters(event: OBSEventTypes["InputVolumeMeters"]) {
-            // event.inputs.forEach(input => {
-            //     // input : {
-            //     //     inputLevelsMul: Array(
-            //     //         []int{0,0,0}
-            //     //         []int{0,0,0}
-            //     //     ),
-            //     //     inputName: String,
-            //     // }
-            //     console.log(input.inputName, ...input.inputLevelsMul)
-            // });
+
+        onInputVolumeMeters(_event: OBSEventTypes["InputVolumeMeters"]) {
+            // reserved
         },
+
         alertSuccess(text: string) {
             this.alertText = text
             this.alertLevel = "success"
+            this.alertTimeoutMs = 3000
             this.alertShow = true
-
-            let self = this
-            setTimeout(function () {
-                ;(self.alertText = ""), (self.alertShow = false)
-            }, 3000)
         },
-        alertInfo(text: string, timeout: number = 5000) {
+
+        alertInfo(text: string, timeoutMs = 5000) {
             this.alertText = text
             this.alertLevel = "info"
+            this.alertTimeoutMs = timeoutMs
             this.alertShow = true
-
-            let self = this
-            setTimeout(function () {
-                ;(self.alertText = ""), (self.alertShow = false)
-            }, timeout)
         },
-        alertWarning(text: string, timeout: number = 5000) {
+
+        alertWarning(text: string, timeoutMs = 5000) {
             this.alertText = text
             this.alertLevel = "warning"
+            this.alertTimeoutMs = timeoutMs
             this.alertShow = true
-
-            let self = this
-            setTimeout(function () {
-                ;(self.alertText = ""), (self.alertShow = false)
-            }, timeout)
         },
-        alertError(text: string, timeout: number = 5000) {
+
+        alertError(text: string, timeoutMs = 5000) {
             this.alertText = text
             this.alertLevel = "error"
+            this.alertTimeoutMs = timeoutMs
             this.alertShow = true
-
-            let self = this
-            setTimeout(function () {
-                ;(self.alertText = ""), (self.alertShow = false)
-            }, timeout)
         },
     },
 
@@ -757,32 +671,40 @@ export default {
             this.getCameraStatus()
             this.getCurrentProfile()
             await this.getRecordStatus()
+
             if (!this.recordingStatusInterval && this.isRecording) {
-                let app = this
-                this.recordingStatusInterval = window.setInterval(function () {
-                    app.getRecordStatus()
+                this.recordingStatusInterval = window.setInterval(() => {
+                    this.getRecordStatus()
                 }, 2000)
             }
 
             if (!this.hungCheckInterval) {
                 this.hungCheckInterval = window.setInterval(() => {
                     this.checkStreamHealth()
-                }, 2000) // Check every 2 seconds
+                }, 2000)
             }
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                if (runtimeConfig.public.appEnv === "development") {
-                    console.error("Failed to init :", err)
-                }
-            } else {
-                console.error("Failed to init with unknown error : ", err)
+            if (runtimeConfig.public.appEnv === "development") {
+                console.error("Failed to init:", err)
+            } else if (!(err instanceof Error)) {
+                console.error("Failed to init with unknown error:", err)
             }
         }
     },
 
-    beforeDestroy() {
+    beforeUnmount() {
         clearInterval(this.recordingStatusInterval)
         clearInterval(this.hungCheckInterval)
+        this.obs.off("CurrentProfileChanged", this.onCurrentProfileChanged)
+        this.obs.off("RecordStateChanged", this.onRecordStateChanged)
+        this.obs.off("VirtualcamStateChanged", this.onVirtualcamStateChanged)
+        this.obs.off(
+            "CurrentSceneCollectionChanged",
+            this.onCurrentSceneCollectionChanged
+        )
+        this.obs.off("InputActiveStateChanged", this.onInputActiveStateChanged)
+        this.obs.off("InputShowStateChanged", this.onInputShowStateChanged)
+        this.obs.off("InputVolumeMeters", this.onInputVolumeMeters)
         this.obs.disconnect()
     },
 }

@@ -1,68 +1,79 @@
 <template>
-    <div class="container mx-auto px-4 max-w-xl">
-        <div>
-            <div class="pt-4">
-                <v-select
-                    ref="teacher-select"
-                    v-model="selectedTeacher"
-                    :items="teachers"
-                    item-text="Name"
-                    item-title="Name"
-                    item-value="Id"
-                    label="ครู"
-                    outlined
-                ></v-select>
-                <v-select
-                    v-model="selectedClass"
-                    :items="filteredClasses"
-                    item-text="Name"
-                    item-title="Name"
-                    item-value="Id"
-                    label="วิชา"
-                    outlined
-                ></v-select>
-            </div>
+    <v-app-bar flat color="surface" border="b">
+        <v-app-bar-title class="font-weight-bold">IQPlus VDO Control</v-app-bar-title>
+        <template #append>
+            <v-chip size="small" variant="outlined" class="mr-4">
+                v{{ runtimeConfig.public.appVersion }}
+            </v-chip>
+        </template>
+    </v-app-bar>
 
-            <ObsController
-                roomName="ห้องเขียว"
-                roomShortName="เขียว"
-                roomId="green"
-                preferredSceneCollection="Green_room"
-                preferredCameraInputName="Green_room_webcam_front"
-                :preferredInputNameList="[
-                    'Green_room_webcam_front',
-                    'ipad',
-                    'Green_room_mic',
-                ]"
-                obsWebsocketUrl="ws://192.168.1.10:4444"
-                :selectedSubject="selectedClass"
-                @start-record-success="clearSelectedTeacher"
-            />
-            <ObsController
-                roomName="ห้องชายกลาง"
-                roomShortName="ชายกลาง"
-                roomId="chaiklang"
-                preferredSceneCollection="Chaiklang_room"
-                preferredCameraInputName="Chaiklang_room_cam"
-                :preferredInputNameList="[
-                    'Chaiklang_room_cam',
-                    'Chaiklang_ipad_or_tablet',
-                ]"
-                obsWebsocketUrl="ws:///192.168.1.10:4445"
-                :selectedSubject="selectedClass"
-                @start-record-success="clearSelectedTeacher"
-            />
-        </div>
-    </div>
-    <div class="text-center text-gray-500 text-xs mt-4">
-        <p>VDO Control version {{ appConfig.version }}</p>
-    </div>
+    <v-main>
+        <v-container class="py-6">
+            <v-card class="mb-6" elevation="1">
+                <v-card-title class="text-body-1 font-weight-medium pt-4 pb-0 px-4">
+                    เลือกครูและวิชา
+                </v-card-title>
+                <v-card-text>
+                    <v-row>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="selectedTeacher"
+                                :items="teachers"
+                                item-title="Name"
+                                item-value="Id"
+                                label="ครู"
+                                hide-details
+                                variant="outlined"
+                            />
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                            <v-select
+                                v-model="selectedClass"
+                                :items="filteredClasses"
+                                item-title="Name"
+                                item-value="Id"
+                                label="วิชา"
+                                :disabled="!selectedTeacher"
+                                hide-details
+                                variant="outlined"
+                            />
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
+
+            <v-row>
+                <v-col
+                    v-for="room in rooms"
+                    :key="room.roomId"
+                    cols="12"
+                    md="6"
+                >
+                    <ObsController
+                        :roomName="room.roomName"
+                        :roomShortName="room.roomShortName"
+                        :roomId="room.roomId"
+                        :preferredSceneCollection="room.preferredSceneCollection"
+                        :preferredCameraInputName="room.preferredCameraInputName"
+                        :preferredInputNameList="room.preferredInputNameList"
+                        :obsWebsocketUrl="room.obsWebsocketUrl"
+                        :selectedSubject="selectedClass"
+                        @start-record-success="clearSelectedTeacher"
+                    />
+                </v-col>
+            </v-row>
+        </v-container>
+    </v-main>
 </template>
+
 <script setup lang="ts">
 import ObsController from "~/components/ObsController.vue"
 import iqplusSubjects from "~/constant/subjects"
 import iqplusTeachers from "~/constant/teachers"
-const appConfig = useAppConfig()
+import iqplusRooms from "~/constant/rooms"
+
+const runtimeConfig = useRuntimeConfig()
 </script>
 
 <script lang="ts">
@@ -75,16 +86,14 @@ export default {
         return {
             teachers: iqplusTeachers,
             classes: iqplusSubjects,
+            rooms: iqplusRooms,
             selectedTeacher: "",
             selectedClass: "",
         }
     },
-    mounted() {},
     computed: {
         filteredClasses() {
-            return this.classes.filter((c) => {
-                return c.TeacherId === this.selectedTeacher
-            })
+            return this.classes.filter((c) => c.TeacherId === this.selectedTeacher)
         },
     },
     methods: {
