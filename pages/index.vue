@@ -1,13 +1,4 @@
 <template>
-    <v-app-bar flat>
-        <v-app-bar-title class="font-weight-bold">IQPlus VDO Control</v-app-bar-title>
-        <template #append>
-            <v-chip size="small" variant="outlined" class="mr-4">
-                {{ runtimeConfig.public.appVersion }}
-            </v-chip>
-        </template>
-    </v-app-bar>
-
     <v-main>
         <v-container class="py-6">
             <v-card class="mb-6" elevation="1">
@@ -72,8 +63,6 @@ import ObsController from "~/components/ObsController.vue"
 import iqplusSubjects from "~/constant/subjects"
 import iqplusTeachers from "~/constant/teachers"
 import iqplusRooms from "~/constant/rooms"
-
-const runtimeConfig = useRuntimeConfig()
 </script>
 
 <script lang="ts">
