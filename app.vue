@@ -1,15 +1,15 @@
 <template>
     <v-app>
         <NuxtLoadingIndicator :color="false" />
-        <v-app-bar flat>
-            <v-app-bar-title class="font-weight-bold">IQPlus VDO Control</v-app-bar-title>
-            <template #append>
-                <v-chip size="small" variant="outlined" class="mr-4">
+        <div class="app-frame">
+            <header class="app-header">
+                <span class="app-title">IQPlus VDO Control</span>
+                <v-chip size="small" variant="outlined">
                     {{ runtimeConfig.public.appVersion }}
                 </v-chip>
-            </template>
-        </v-app-bar>
-        <NuxtPage />
+            </header>
+            <NuxtPage />
+        </div>
     </v-app>
 </template>
 
