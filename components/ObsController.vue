@@ -4,13 +4,22 @@
 
         <v-card-title class="d-flex align-center justify-space-between py-3 px-4">
             <span class="text-h6 font-weight-bold">{{ roomName }}</span>
-            <v-chip
-                size="small"
-                :color="isObsConnected ? 'success' : 'error'"
-                variant="tonal"
-            >
-                {{ isObsConnected ? "เชื่อมต่อแล้ว" : "ไม่ได้เชื่อมต่อ" }}
-            </v-chip>
+            <div class="d-flex align-center ga-2">
+                <v-chip
+                    v-if="isObsConnected"
+                    :color="diskChipColor"
+                    size="small"
+                    variant="tonal"
+                    prepend-icon="mdi-harddisk"
+                >{{ diskChipText }}</v-chip>
+                <v-chip
+                    size="small"
+                    :color="isObsConnected ? 'success' : 'error'"
+                    variant="tonal"
+                >
+                    {{ isObsConnected ? "เชื่อมต่อแล้ว" : "ไม่ได้เชื่อมต่อ" }}
+                </v-chip>
+            </div>
         </v-card-title>
 
         <v-divider />
@@ -66,15 +75,6 @@
                     </v-btn>
                 </v-col>
             </v-row>
-
-            <div class="d-flex justify-center mt-3">
-                <v-chip
-                    :color="diskChipColor"
-                    size="small"
-                    variant="tonal"
-                    prepend-icon="mdi-harddisk"
-                >{{ diskChipText }}</v-chip>
-            </div>
 
             <v-divider class="my-4" />
 
