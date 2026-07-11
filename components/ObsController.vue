@@ -201,7 +201,10 @@ const emit = defineEmits(["StartRecordSuccess"])
 </script>
 
 <script lang="ts">
+import type { DiskLevel } from "~/composables/useDiskAlert"
+
 const runtimeConfig = useRuntimeConfig()
+const { setRoomDisk, clearRoom } = useDiskAlert()
 
 export default {
     props: {
@@ -239,6 +242,9 @@ export default {
             hungCounter: 0,
             streamRetryCount: 0,
             isResettingStream: false,
+            freeDiskGb: -1,
+            diskLevel: "ok" as DiskLevel,
+            diskCheckInterval: 0,
         }
     },
     computed: {
@@ -484,6 +490,35 @@ export default {
             }
         },
 
+        async checkDiskSpace() {
+            if (!this.isObsConnected) return
+            try {
+                const stats = await this.obs.call("GetStats")
+                // availableDiskSpace is reported in megabytes
+                const freeGb = stats.availableDiskSpace / 1024
+                let level: DiskLevel = "ok"
+                if (freeGb < 10) {
+                    level = "alert"
+                } else if (freeGb < 20) {
+                    level = "warning"
+                }
+                this.freeDiskGb = freeGb
+                this.diskLevel = level
+                setRoomDisk(this.roomId ?? "", { freeGb, level })
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.log("checkDiskSpace", {
+                        availableDiskSpace: stats.availableDiskSpace,
+                        freeGb,
+                        level,
+                    })
+                }
+            } catch (err: unknown) {
+                if (runtimeConfig.public.appEnv === "development") {
+                    console.error("checkDiskSpace error:", err)
+                }
+            }
+        },
+
         async startRecording() {
             if (this.isRecording) {
                 this.alertError("กำลังอัดอยู่")
@@ -700,6 +735,13 @@ export default {
                     this.checkStreamHealth()
                 }, 2000)
             }
+
+            await this.checkDiskSpace()
+            if (!this.diskCheckInterval) {
+                this.diskCheckInterval = window.setInterval(() => {
+                    this.checkDiskSpace()
+                }, 30000)
+            }
         } catch (err: unknown) {
             if (runtimeConfig.public.appEnv === "development") {
                 console.error("Failed to init:", err)
@@ -712,6 +754,8 @@ export default {
     beforeUnmount() {
         clearInterval(this.recordingStatusInterval)
         clearInterval(this.hungCheckInterval)
+        clearInterval(this.diskCheckInterval)
+        clearRoom(this.roomId ?? "")
         this.obs.off("CurrentProfileChanged", this.onCurrentProfileChanged)
         this.obs.off("RecordStateChanged", this.onRecordStateChanged)
         this.obs.off("VirtualcamStateChanged", this.onVirtualcamStateChanged)
