@@ -39,6 +39,7 @@
             :preferredCameraInputName="room.preferredCameraInputName"
             :preferredInputNameList="room.preferredInputNameList"
             :obsWebsocketUrl="room.obsWebsocketUrl"
+            :recordDriveLabel="room.recordDriveLabel"
             :selectedSubject="selectedClass"
             @start-record-success="clearSelectedTeacher"
         />

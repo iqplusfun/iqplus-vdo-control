@@ -6,4 +6,5 @@ export interface Room {
     preferredCameraInputName: string
     preferredInputNameList: string[]
     obsWebsocketUrl: string
+    recordDriveLabel?: string
 }

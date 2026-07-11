@@ -9,6 +9,7 @@ const rooms: Room[] = [
         preferredCameraInputName: "Green_room_webcam_front",
         preferredInputNameList: ["Green_room_webcam_front", "ipad", "Green_room_mic"],
         obsWebsocketUrl: "ws://192.168.1.10:4444",
+        recordDriveLabel: "C:",
     },
     {
         roomId: "chaiklang",
@@ -18,6 +19,7 @@ const rooms: Room[] = [
         preferredCameraInputName: "Chaiklang_room_cam",
         preferredInputNameList: ["Chaiklang_room_cam", "Chaiklang_ipad_or_tablet"],
         obsWebsocketUrl: "ws://192.168.1.10:4445",
+        recordDriveLabel: "D:",
     },
 ]
 

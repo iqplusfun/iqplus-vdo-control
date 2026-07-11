@@ -216,6 +216,7 @@ export default {
         preferredInputNameList: Array as () => string[],
         obsWebsocketUrl: String,
         selectedSubject: String,
+        recordDriveLabel: String,
     },
     data() {
         return {
