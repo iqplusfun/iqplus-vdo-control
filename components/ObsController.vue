@@ -67,6 +67,15 @@
                 </v-col>
             </v-row>
 
+            <div class="d-flex justify-center mt-3">
+                <v-chip
+                    :color="diskChipColor"
+                    size="small"
+                    variant="tonal"
+                    prepend-icon="mdi-harddisk"
+                >{{ diskChipText }}</v-chip>
+            </div>
+
             <v-divider class="my-4" />
 
             <!-- Status row -->
@@ -251,6 +260,16 @@ export default {
     computed: {
         durationString() {
             return new Date(this.durationMs).toISOString().slice(12, 19)
+        },
+        diskChipColor(): string {
+            if (this.diskLevel === "alert") return "error"
+            if (this.diskLevel === "warning") return "warning"
+            return "default"
+        },
+        diskChipText(): string {
+            if (this.freeDiskGb < 0) return "ดิสก์: -"
+            const label = this.recordDriveLabel ? this.recordDriveLabel + " " : ""
+            return "ดิสก์: " + label + Math.floor(this.freeDiskGb) + " GB"
         },
     },
     methods: {
