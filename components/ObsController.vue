@@ -533,6 +533,9 @@ export default {
                     })
                 }
             } catch (err: unknown) {
+                this.freeDiskGb = -1
+                this.diskLevel = "ok"
+                clearRoom(this.roomId ?? "")
                 if (runtimeConfig.public.appEnv === "development") {
                     console.error("checkDiskSpace error:", err)
                 }
