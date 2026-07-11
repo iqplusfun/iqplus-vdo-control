@@ -12,6 +12,8 @@ body {
 
 /* --- The fixed mobile frame: phone-shaped no matter the viewport --- */
 .app-frame {
+    position: relative;
+    z-index: 1;
     max-width: 420px;
     margin: 0 auto;
     min-height: 100vh;
